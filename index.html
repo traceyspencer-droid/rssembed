@@ -33,10 +33,6 @@
     }
 
     .item {
-      display: grid;
-      grid-template-columns: 160px minmax(0, 1fr);
-      gap: 16px;
-      align-items: start;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -49,6 +45,13 @@
       transform: translateY(-2px);
       box-shadow: 0 14px 32px rgba(18, 113, 95, 0.12);
       border-color: #c5ddd5;
+    }
+
+    .item.has-thumb {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
     }
 
     .thumb-wrap {
@@ -120,10 +123,13 @@
 
     @media (max-width: 640px) {
       .item {
-        grid-template-columns: 1fr;
-        gap: 14px;
         padding: 14px;
         border-radius: 14px;
+      }
+
+      .item.has-thumb {
+        grid-template-columns: 1fr;
+        gap: 14px;
       }
 
       .title {
@@ -198,21 +204,19 @@
 
     function resizeBloggerThumb(url, width) {
       if (!url) return '';
+      const height = Math.round(width * 0.625);
+
       return url
-        .replace(/\/s72-c\//, `/w${width}-h${Math.round(width * 0.625)}-p-k-no-nu/`)
-        .replace(/=s72-c$/, `=w${width}-h${Math.round(width * 0.625)}-p-k-no-nu`);
+        .replace(/\/s72-c\//, `/w${width}-h${height}-p-k-no-nu/`)
+        .replace(/=s72-c$/, `=w${width}-h${height}-p-k-no-nu`)
+        .replace(/\/w72-h72-p-k-no-nu\//, `/w${width}-h${height}-p-k-no-nu/`)
+        .replace(/=w72-h72-p-k-no-nu$/, `=w${width}-h${height}-p-k-no-nu`);
     }
 
     function getThumbnail(entry) {
       if (entry.media$thumbnail && entry.media$thumbnail.url) {
         return resizeBloggerThumb(entry.media$thumbnail.url, thumbWidth);
       }
-
-      if (entry.content && entry.content.$t) {
-        const match = entry.content.$t.match(/<img[^>]+src=["']([^"']+)["']/i);
-        if (match && match[1]) return match[1];
-      }
-
       return '';
     }
 
@@ -231,10 +235,11 @@
         const published = entry.published ? formatDate(entry.published.$t) : '';
         const summary = getSummary(entry);
         const thumbnail = getThumbnail(entry);
+        const hasThumb = !!thumbnail;
 
         return `
-          <article class="item">
-            ${thumbnail ? `
+          <article class="item${hasThumb ? ' has-thumb' : ''}">
+            ${hasThumb ? `
               <a class="thumb-wrap" href="${link}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(title)}">
                 <img class="thumb" src="${thumbnail}" alt="" loading="lazy">
               </a>
