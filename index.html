@@ -10,7 +10,6 @@
       --text: #18322c;
       --muted: #5f7a73;
       --border: #d7e8e2;
-      --accent: #12715f;
       --accent-dark: #0d5a4c;
       --shadow: 0 10px 30px rgba(18, 113, 95, 0.08);
       --radius: 18px;
@@ -30,14 +29,18 @@
 
     .feed {
       display: grid;
-      gap: 14px;
+      gap: 16px;
     }
 
     .item {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 16px 16px 14px;
+      padding: 16px;
       box-shadow: var(--shadow);
       transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     }
@@ -46,6 +49,25 @@
       transform: translateY(-2px);
       box-shadow: 0 14px 32px rgba(18, 113, 95, 0.12);
       border-color: #c5ddd5;
+    }
+
+    .thumb-wrap {
+      display: block;
+      width: 100%;
+    }
+
+    .thumb {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      border-radius: 14px;
+      background: #eef4f1;
+      border: 1px solid #e4efea;
+    }
+
+    .content {
+      min-width: 0;
     }
 
     .meta {
@@ -96,8 +118,10 @@
       background: #fff8f8;
     }
 
-    @media (max-width: 480px) {
+    @media (max-width: 640px) {
       .item {
+        grid-template-columns: 1fr;
+        gap: 14px;
         padding: 14px;
         border-radius: 14px;
       }
@@ -124,6 +148,7 @@
     const blogBase = 'https://blog.billcutter.co.uk';
     const callbackName = 'renderBloggerFeed';
     const summaryLength = 320;
+    const thumbWidth = 480;
 
     function stripHtml(html) {
       const div = document.createElement('div');
@@ -171,6 +196,26 @@
       return '';
     }
 
+    function resizeBloggerThumb(url, width) {
+      if (!url) return '';
+      return url
+        .replace(/\/s72-c\//, `/w${width}-h${Math.round(width * 0.625)}-p-k-no-nu/`)
+        .replace(/=s72-c$/, `=w${width}-h${Math.round(width * 0.625)}-p-k-no-nu`);
+    }
+
+    function getThumbnail(entry) {
+      if (entry.media$thumbnail && entry.media$thumbnail.url) {
+        return resizeBloggerThumb(entry.media$thumbnail.url, thumbWidth);
+      }
+
+      if (entry.content && entry.content.$t) {
+        const match = entry.content.$t.match(/<img[^>]+src=["']([^"']+)["']/i);
+        if (match && match[1]) return match[1];
+      }
+
+      return '';
+    }
+
     function renderBloggerFeed(data) {
       const container = document.getElementById('feed');
       const entries = (data.feed && data.feed.entry) ? data.feed.entry.slice(0, limit) : [];
@@ -185,14 +230,22 @@
         const link = getPostLink(entry);
         const published = entry.published ? formatDate(entry.published.$t) : '';
         const summary = getSummary(entry);
+        const thumbnail = getThumbnail(entry);
 
         return `
           <article class="item">
-            ${published ? `<div class="meta">${published}</div>` : ''}
-            <h3 class="title">
-              <a href="${link}" target="_blank" rel="noopener noreferrer">${escapeHtml(title)}</a>
-            </h3>
-            ${summary ? `<p class="desc">${escapeHtml(summary)}</p>` : ''}
+            ${thumbnail ? `
+              <a class="thumb-wrap" href="${link}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(title)}">
+                <img class="thumb" src="${thumbnail}" alt="" loading="lazy">
+              </a>
+            ` : ''}
+            <div class="content">
+              ${published ? `<div class="meta">${published}</div>` : ''}
+              <h3 class="title">
+                <a href="${link}" target="_blank" rel="noopener noreferrer">${escapeHtml(title)}</a>
+              </h3>
+              ${summary ? `<p class="desc">${escapeHtml(summary)}</p>` : ''}
+            </div>
           </article>
         `;
       }).join('');
