@@ -55,76 +55,81 @@
 <body>
   <div id="feed" class="feed"></div>
 
-  <script>
-    const params = new URLSearchParams(location.search);
-    const label = params.get('label') || 'WebsiteFeature';
-    const limit = Math.min(parseInt(params.get('limit') || '2', 10), 10);
-    const blogBase = 'https://blog.billcutter.co.uk';
-    const callbackName = 'renderBloggerFeed';
+<script>
+  const params = new URLSearchParams(location.search);
+  const rawLabel = (params.get('label') || '').trim();
+  const label = rawLabel || '';
+  const limit = Math.min(parseInt(params.get('limit') || '10', 10), 20);
+  const blogBase = 'https://blog.billcutter.co.uk';
+  const callbackName = 'renderBloggerFeed';
 
-    function stripHtml(html) {
-      const div = document.createElement('div');
-      div.innerHTML = html || '';
-      return (div.textContent || div.innerText || '').replace(/\s+/g, ' ').trim();
+  function stripHtml(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html || '';
+    return (div.textContent || div.innerText || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function truncate(text, max) {
+    if (!text || text.length <= max) return text || '';
+    return text.substring(0, max).replace(/\s+\S*$/, '') + '...';
+  }
+
+  function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    if (isNaN(date)) return '';
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+
+  function getPostLink(entry) {
+    if (!entry.link || !entry.link.length) return '#';
+    const alt = entry.link.find(l => l.rel === 'alternate' && l.type === 'text/html');
+    return alt ? alt.href : entry.link[0].href;
+  }
+
+  function renderBloggerFeed(data) {
+    const container = document.getElementById('feed');
+    const entries = (data.feed && data.feed.entry) ? data.feed.entry.slice(0, limit) : [];
+
+    if (!entries.length) {
+      container.innerHTML = '<div class="error">No posts found.</div>';
+      return;
     }
 
-    function truncate(text, max) {
-      if (!text || text.length <= max) return text || '';
-      return text.substring(0, max).replace(/\s+\S*$/, '') + '...';
-    }
+    container.innerHTML = entries.map(entry => {
+      const title = entry.title ? entry.title.$t : 'Untitled';
+      const link = getPostLink(entry);
+      const published = entry.published ? formatDate(entry.published.$t) : '';
+      const summary = entry.summary ? truncate(stripHtml(entry.summary.$t), 180) : '';
 
-    function formatDate(dateStr) {
-      const date = new Date(dateStr);
-      if (isNaN(date)) return '';
-      return date.toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
-      });
-    }
+      return `
+        <article class="item">
+          <h3 class="title">
+            <a href="${link}" target="_blank" rel="noopener noreferrer">${title}</a>
+          </h3>
+          ${published ? `<div class="meta">${published}</div>` : ''}
+          ${summary ? `<div class="desc">${summary}</div>` : ''}
+        </article>
+      `;
+    }).join('');
+  }
 
-    function getPostLink(entry) {
-      if (!entry.link || !entry.link.length) return '#';
-      const alt = entry.link.find(l => l.rel === 'alternate' && l.type === 'text/html');
-      return alt ? alt.href : entry.link[0].href;
-    }
+  function showError() {
+    document.getElementById('feed').innerHTML =
+      '<div class="error">Could not load the feed.</div>';
+  }
 
-    function renderBloggerFeed(data) {
-      const container = document.getElementById('feed');
-      const entries = (data.feed && data.feed.entry) ? data.feed.entry.slice(0, limit) : [];
+  const feedPath = label
+    ? `/feeds/posts/default/-/${encodeURIComponent(label)}`
+    : '/feeds/posts/default/';
 
-      if (!entries.length) {
-        container.innerHTML = '<div class="error">No posts found.</div>';
-        return;
-      }
-
-      container.innerHTML = entries.map(entry => {
-        const title = entry.title ? entry.title.$t : 'Untitled';
-        const link = getPostLink(entry);
-        const published = entry.published ? formatDate(entry.published.$t) : '';
-        const summary = entry.summary ? truncate(stripHtml(entry.summary.$t), 180) : '';
-
-        return `
-          <article class="item">
-            <h3 class="title">
-              <a href="${link}" target="_blank" rel="noopener noreferrer">${title}</a>
-            </h3>
-            ${published ? `<div class="meta">${published}</div>` : ''}
-            ${summary ? `<div class="desc">${summary}</div>` : ''}
-          </article>
-        `;
-      }).join('');
-    }
-
-    function showError() {
-      document.getElementById('feed').innerHTML =
-        '<div class="error">Could not load the feed.</div>';
-    }
-
-    const script = document.createElement('script');
-    script.src = `${blogBase}/feeds/posts/default/-/${encodeURIComponent(label)}?alt=json-in-script&callback=${callbackName}`;
-    script.onerror = showError;
-    document.body.appendChild(script);
-  </script>
+  const script = document.createElement('script');
+  script.src = `${blogBase}${feedPath}?alt=json-in-script&callback=${callbackName}&max-results=${limit}`;
+  script.onerror = showError;
+  document.body.appendChild(script);
+</script>
 </body>
 </html>
