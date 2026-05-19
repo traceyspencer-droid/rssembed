@@ -6,15 +6,12 @@
   <title>BillCutter Feed Widget</title>
   <style>
     :root {
-      --bg: #f5faf8;
       --card: #ffffff;
-      --card-alt: #eef7f4;
       --text: #18322c;
       --muted: #5f7a73;
       --border: #d7e8e2;
       --accent: #12715f;
       --accent-dark: #0d5a4c;
-      --accent-soft: #dff3ec;
       --shadow: 0 10px 30px rgba(18, 113, 95, 0.08);
       --radius: 18px;
     }
@@ -25,9 +22,9 @@
 
     body {
       margin: 0;
-      padding: 18px;
+      padding: 0;
       font-family: Inter, Arial, sans-serif;
-      background: linear-gradient(180deg, #f7fbfa 0%, #f3faf7 100%);
+      background: transparent;
       color: var(--text);
     }
 
@@ -51,33 +48,14 @@
       border-color: #c5ddd5;
     }
 
-    .meta-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 5px 10px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent-dark);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-    }
-
     .meta {
       font-size: 12px;
       color: var(--muted);
+      margin-bottom: 10px;
     }
 
     .title {
-      margin: 0 0 8px;
+      margin: 0 0 10px;
       font-size: 18px;
       line-height: 1.35;
       font-weight: 800;
@@ -97,7 +75,7 @@
 
     .desc {
       font-size: 14px;
-      line-height: 1.6;
+      line-height: 1.7;
       color: #39524c;
       margin: 0;
     }
@@ -119,10 +97,6 @@
     }
 
     @media (max-width: 480px) {
-      body {
-        padding: 12px;
-      }
-
       .item {
         padding: 14px;
         border-radius: 14px;
@@ -149,6 +123,7 @@
     const limit = Math.min(Math.max(requestedLimit || 10, 1), 20);
     const blogBase = 'https://blog.billcutter.co.uk';
     const callbackName = 'renderBloggerFeed';
+    const summaryLength = 320;
 
     function stripHtml(html) {
       const div = document.createElement('div');
@@ -186,6 +161,16 @@
         .replace(/'/g, '&#039;');
     }
 
+    function getSummary(entry) {
+      if (entry.content && entry.content.$t) {
+        return truncate(stripHtml(entry.content.$t), summaryLength);
+      }
+      if (entry.summary && entry.summary.$t) {
+        return truncate(stripHtml(entry.summary.$t), summaryLength);
+      }
+      return '';
+    }
+
     function renderBloggerFeed(data) {
       const container = document.getElementById('feed');
       const entries = (data.feed && data.feed.entry) ? data.feed.entry.slice(0, limit) : [];
@@ -195,22 +180,15 @@
         return;
       }
 
-      const badgeText = label ? `Label: ${escapeHtml(label)}` : 'Latest posts';
-
       container.innerHTML = entries.map(entry => {
         const title = entry.title ? entry.title.$t : 'Untitled';
         const link = getPostLink(entry);
         const published = entry.published ? formatDate(entry.published.$t) : '';
-        const summary = entry.summary
-          ? truncate(stripHtml(entry.summary.$t), 180)
-          : (entry.content ? truncate(stripHtml(entry.content.$t), 180) : '');
+        const summary = getSummary(entry);
 
         return `
           <article class="item">
-            <div class="meta-row">
-              <span class="badge">${badgeText}</span>
-              ${published ? `<span class="meta">${published}</span>` : ''}
-            </div>
+            ${published ? `<div class="meta">${published}</div>` : ''}
             <h3 class="title">
               <a href="${link}" target="_blank" rel="noopener noreferrer">${escapeHtml(title)}</a>
             </h3>
