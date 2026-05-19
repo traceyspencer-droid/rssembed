@@ -27,6 +27,15 @@
       color: var(--text);
     }
 
+    .widget-title {
+      margin: 0 0 14px;
+      font-size: 24px;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
     .feed {
       display: grid;
       gap: 16px;
@@ -122,6 +131,11 @@
     }
 
     @media (max-width: 640px) {
+      .widget-title {
+        font-size: 21px;
+        margin-bottom: 12px;
+      }
+
       .item {
         padding: 14px;
         border-radius: 14px;
@@ -143,12 +157,14 @@
   </style>
 </head>
 <body>
+  <div id="widget-title"></div>
   <div id="feed" class="feed"></div>
 
   <script>
     const params = new URLSearchParams(location.search);
     const rawLabel = (params.get('label') || '').trim();
     const label = rawLabel || '';
+    const widgetTitle = (params.get('title') || '').trim();
     const requestedLimit = parseInt(params.get('limit') || '10', 10);
     const limit = Math.min(Math.max(requestedLimit || 10, 1), 20);
     const blogBase = 'https://blog.billcutter.co.uk';
@@ -220,6 +236,12 @@
       return '';
     }
 
+    function renderWidgetTitle() {
+      if (!widgetTitle) return;
+      document.getElementById('widget-title').innerHTML =
+        `<h2 class="widget-title">${escapeHtml(widgetTitle)}</h2>`;
+    }
+
     function renderBloggerFeed(data) {
       const container = document.getElementById('feed');
       const entries = (data.feed && data.feed.entry) ? data.feed.entry.slice(0, limit) : [];
@@ -260,6 +282,8 @@
       document.getElementById('feed').innerHTML =
         '<div class="error">Could not load the feed right now.</div>';
     }
+
+    renderWidgetTitle();
 
     const feedPath = label
       ? `/feeds/posts/default/-/${encodeURIComponent(label)}`
